@@ -74,7 +74,7 @@ def calc_population_dist(population, nodes):
     for c in population.columns:
         paths = population[c].tolist()
         dist[c] = cm.total_distance(paths, nodes)
-        print(f'{c} -- {dist[c]}')
+        print(f'{c} -- {dist[c]:.2f}')
         
     return dist  
 
@@ -125,7 +125,6 @@ def selection(population, nodes):
 
     return n_population, dist, solution
 
-
 # Partially - Mapped Crossover
 # random crossover size(default 10~50)
 # p1, p2 crossover index random
@@ -142,15 +141,16 @@ def crossover(population, nodes):
         
         p1_idx = random.choice(range(0, len(nodes)-size))
         p2_idx = random.choice(range(0, len(nodes)-size))
-        
-        p1_cross = p1[p1_idx:(p1_idx + size)]
-        p2_cross = p2[p2_idx:(p2_idx + size)]
-       
+
+        print(p1_idx, p2_idx)
         # find & replace & crossover
-        for i in range(size):
-            p3[p1.index(p2_cross[i])] = p1_cross[i]
+        for i in range(size):            
+            p1_cross = p3[p1_idx:(p1_idx + size)]
+            p2_cross = p4[p2_idx:(p2_idx + size)]            
+            print('crossover: ', cols[idx], size, p1_cross[i], ' <-> ', p2_cross[i])        
+            p3[p3.index(p2_cross[i])] = p1_cross[i]
             p3[p1_idx+i] = p2_cross[i]
-            p4[p2.index(p1_cross[i])] = p2_cross[i]
+            p4[p4.index(p1_cross[i])] = p2_cross[i]
             p4[p2_idx+i] = p1_cross[i]
             
         population[cols[idx]] = p3
@@ -190,7 +190,7 @@ def mutate(population, nodes):
 def init_solution(f_sol, nodes):
     # check solution file
     solution = None
-    dist = 0
+    dist = 99999999
     if os.path.exists(f_sol):
         print('init_solution -- Read solution file')
         with open(f_sol) as f:
@@ -359,11 +359,13 @@ def ga(args):
         
         print('\nmutate')
         population = mutate(population, nodes)\
+            
+    print(f"total distance: {s_dist}")    
+    save_result(solution, s_dist, nodes)
 
     return solution, s_dist, nodes
 
 if __name__ == '__main__':
     solution, s_dist, nodes = ga()
-    print(f"total distance: {s_dist}")    
-    save_result(solution, s_dist, nodes)
+    
     

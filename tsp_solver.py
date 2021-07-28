@@ -51,6 +51,8 @@ if __name__ == '__main__':
                         help='Greedy method selection, 0-greedy, 1-greedy+heuristic')    
     parser.add_argument('--gd_cluster_use', '-gc', type=int, default=0,
                         help='Greedy method selection, 0-not, 1-use')
+    parser.add_argument('--gd_start_no', '-gs', type=int, default=1,
+                        help='Greedy method start node no.')
     args = parser.parse_args()    
     
     fp_data = os.getcwd() + '/data/'

@@ -359,3 +359,9 @@ generation/2021-07-28 203128_solution.csv
 generation/population.txt
 
 generation/solution.csv
+
+*.txt
+
+*.png
+
+*.csv

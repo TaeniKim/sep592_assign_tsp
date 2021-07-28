@@ -35,7 +35,7 @@ def plot_KMeans(output):
 
 # Hyper parameter
 def get_group_by_KMeans(nodes, is_plot=False):
-    NUM_CLUSTER = 10
+    NUM_CLUSTER = 1
     
     lst=[]
     for n, x, y in nodes:

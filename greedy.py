@@ -5,6 +5,7 @@ Created on Wed Jul 28 21:51:55 2021
 @author: taeni
 """
 import os
+import argparse
 import time
 from datetime import datetime
 import random
@@ -212,6 +213,7 @@ def exec_greedyEx2(df, nodes, ratio=1.0):
 
 # greedy 기본 - 그룹단위 수행
 def exec_greedy(df, nodes):
+    print('Exec_greedy start..!!')
     lst_node = df['node'].to_list()
     lst_x = nodes['x'].to_list()
     lst_y = nodes['y'].to_list()
@@ -311,13 +313,15 @@ def exec_group_fix(algo, nodes, args):
 
 
 def exec_all(algo, nodes, args):
+    print('\nexec_all -- start..!!')
     paths = []
     positions = []
     ratio = 0.1
     
     start = time.time()
-    print('Start all --', algo, f'ratio: {ratio}')
-    paths, positions = exec_greedyEx(nodes, ratio)
+    print('Start greedy all --', f'ratio: {ratio}')
+    paths, positions = exec_greedy(nodes, nodes)
+    #paths, positions = exec_greedyEx(nodes, ratio)
     #paths, positions = exec_randomEx(nodes)
     print('Elapse: ', time.time() - start)
     print('Distance: ', cm.total_distance(paths, nodes))        
@@ -330,8 +334,8 @@ def init_args(args):
     global HEURISTIC_RATIO
     global METHOD_NO    
     
-    START_NODE = args.g_limit
-    HEURISTIC_RATIO = args.p_size 
+    START_NODE = args.gd_start_no
+    HEURISTIC_RATIO = args.h_ratio 
     METHOD_NO = args.gd_method
 
 
@@ -355,6 +359,21 @@ def greedy(args):
     cm.save_result(paths, pos, dist)
     
     return paths, dist
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='TSP solver args.')
+    parser.add_argument('file_name', help='tsp filename')
+    parser.add_argument('--h_ratio', '-hr', type=float, default=0.5,
+                        help='heuristic ratio')
+    parser.add_argument('--gd_method', '-gm', type=int, default=1,
+                        help='Greedy method selection, 0-greedy, 1-greedy+heuristic')    
+    parser.add_argument('--gd_cluster_use', '-gc', type=int, default=0,
+                        help='Greedy method selection, 0-not, 1-use')
+    parser.add_argument('--gd_start_no', '-gs', type=int, default=1,
+                        help='Greedy method start node no.')
+    args = parser.parse_args()    
+    
+    greedy(args)
 
     
     

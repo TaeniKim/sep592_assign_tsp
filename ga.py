@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+import common as cm
+
 # load tsp file
 def load_tspfile(filename):
     with open(filename, 'r') as f:
@@ -26,21 +28,6 @@ def load_tspfile(filename):
     
     
     return pd.DataFrame(parsed, columns=['node','x','y']).astype('int')
-
-
-# nodes=[x, y, group]
-def calc_distance(s, d):
-    return math.sqrt((s['x'] - d['x'])**2 + (s['y'] - d['y'])**2)
-
-
-def total_distance(paths, nodes):
-    total = 0    
-    for idx in range(len(paths)-1):        
-        s = {'x':nodes.loc[paths[idx]]['x'], 'y':nodes.loc[paths[idx]]['y']}
-        d = {'x':nodes.loc[paths[idx+1]]['x'], 'y':nodes.loc[paths[idx+1]]['y']}
-        total += calc_distance(s, d)
-    
-    return total
 
 
 # 전체 수행
@@ -78,7 +65,7 @@ def exec_greedy4init(nodes, ratio=0.5, s_node=5786, e_node=7340):
         path.append(mIdx)
         pos.append([lst_x[mIdx-1], lst_y[mIdx-1]])
         
-    print('Elapse Time: ', time.time() - start)
+    print('Elapse Time: ', time.time() - start, '\n')
     return path, pos
 
 def calc_population_dist(population, nodes):
@@ -86,7 +73,8 @@ def calc_population_dist(population, nodes):
     dist = {}
     for c in population.columns:
         paths = population[c].tolist()
-        dist[c] = total_distance(paths, nodes)
+        dist[c] = cm.total_distance(paths, nodes)
+        print(f'{c} -- {dist[c]}')
         
     return dist  
 
@@ -142,9 +130,10 @@ def selection(population, nodes):
 # random crossover size(default 10~50)
 # p1, p2 crossover index random
 def crossover(population, nodes):
+    cols = population.columns.to_list()
     for idx in range(0, int(POPULATION_SIZE), 2):
-        p1 = population[idx].tolist()
-        p2 = population[idx+1].tolist()
+        p1 = population[cols[idx]].tolist()
+        p2 = population[cols[idx+1]].tolist()
         
         p3 = p1[:]
         p4 = p2[:]
@@ -164,13 +153,14 @@ def crossover(population, nodes):
             p4[p2.index(p1_cross[i])] = p2_cross[i]
             p4[p2_idx+i] = p1_cross[i]
             
-        population[idx] = p3
-        population[idx+1] = p4
+        population[cols[idx]] = p3
+        population[cols[idx+1]] = p4
         
     return population
 
 # 
 def mutate(population, nodes):
+    cols = population.columns.to_list()
     for i in range(POPULATION_SIZE):
         p = random.random()
         if p < MUTATION_RATE:            
@@ -182,8 +172,8 @@ def mutate(population, nodes):
             while len(s.intersection(range(idx2, idx2+size))) > 0:
                   idx2 = random.choice(range(0, len(nodes)-size))
 
-            print('Mutate: ', i, size, idx1, ' <-> ', idx2)
-            buf = population[i].tolist()
+            print('Mutate: ', cols[i], size, idx1, ' <-> ', idx2)
+            buf = population[cols[i]].tolist()
             p1_cross = buf[idx1:(idx1+size)]
             p2_cross = buf[idx2:(idx2+size)]
             
@@ -192,55 +182,24 @@ def mutate(population, nodes):
                 buf[idx1+j] = p2_cross[j]
                 buf[idx2+j] = p1_cross[j]
             
-            population[i] = buf            
+            population[cols[i]] = buf            
         
     return population
 
 
-def init_args():    
-    global POPULATION_SIZE
-    global GENERATION_LIMIT
-    global SELECTION_SIZE_ELITE
-    global SELECTION_SIZE_TOURNAMENT
-    global SELECTION_SIZE_RANDOM
-    global CROSSOVER_SIZE_MIN
-    global CROSSOVER_SIZE_MAX
-    global MUTATION_RATE
-    global MUTATION_SIZE_MIN
-    global MUTATION_SIZE_MAX
-    
-    arg_g_limit = 10
-    arg_p_size = 10
-    arg_s_elite_rate = 0.2
-    arg_s_tour_rate = 0.4    
-    arg_c_size_min = 10
-    arg_c_size_max = 50    
-    arg_m_rate = 0.2    
-    arg_m_size_min = 3
-    arg_m_size_max = 10
-
-    GENERATION_LIMIT = arg_g_limit    
-    POPULATION_SIZE = arg_p_size    
-    SELECTION_SIZE_ELITE = int(POPULATION_SIZE * arg_s_elite_rate)
-    SELECTION_SIZE_TOURNAMENT = int(POPULATION_SIZE * arg_s_tour_rate)
-    SELECTION_SIZE_RANDOM = POPULATION_SIZE - (SELECTION_SIZE_ELITE + SELECTION_SIZE_TOURNAMENT)
-    CROSSOVER_SIZE_MIN = arg_c_size_min
-    CROSSOVER_SIZE_MAX = arg_c_size_max
-    MUTATION_RATE = arg_m_rate
-    MUTATION_SIZE_MIN = arg_m_size_min
-    MUTATION_SIZE_MAX = arg_m_size_max
-
-
 def init_solution(f_sol, nodes):
     # check solution file
-    solution = 0
+    solution = None
+    dist = 0
     if os.path.exists(f_sol):
         print('init_solution -- Read solution file')
         with open(f_sol) as f:
             solution = f.readlines()            
         solution = [int(x.strip()) for x in solution]
+        dist = cm.total_distance(solution, nodes)
+        print('init_solution -- dist: ', dist)
 
-    return solution
+    return solution, dist
 
 
 def init_population(f_pop, nodes):
@@ -310,7 +269,7 @@ def save_solution(f_sol, solution):
     # history
     fp = os.getcwd() + r'/generation/'
     dt = datetime.now().strftime('%Y-%m-%d %H%M%S')        
-    file = open(fp + dt + '_solution.txt', 'w')
+    file = open(fp + dt + '_solution.csv', 'w')
     for l in solution:
         file.write(str(l)+'\n')
     file.close()
@@ -332,28 +291,53 @@ def update_population_column(population, col, paths):
     population[str(col)] = paths    
 
 
+def init_args(args):    
+    global POPULATION_SIZE
+    global GENERATION_LIMIT
+    global SELECTION_SIZE_ELITE
+    global SELECTION_SIZE_TOURNAMENT
+    global SELECTION_SIZE_RANDOM
+    global CROSSOVER_SIZE_MIN
+    global CROSSOVER_SIZE_MAX
+    global MUTATION_RATE
+    global MUTATION_SIZE_MIN
+    global MUTATION_SIZE_MAX
+    
+    GENERATION_LIMIT = args.g_limit
+    POPULATION_SIZE = args.p_size 
+    SELECTION_SIZE_ELITE = int(POPULATION_SIZE * args.s_elite_rate)
+    SELECTION_SIZE_TOURNAMENT = int(POPULATION_SIZE * args.s_tour_rate)
+    SELECTION_SIZE_RANDOM = POPULATION_SIZE - (SELECTION_SIZE_ELITE + SELECTION_SIZE_TOURNAMENT)
+    CROSSOVER_SIZE_MIN = args.c_size_min
+    CROSSOVER_SIZE_MAX = args.c_size_max
+    MUTATION_RATE = args.m_rate
+    MUTATION_SIZE_MIN = args.m_size_min
+    MUTATION_SIZE_MAX = args.m_size_max
+
+
 ## solution = (fitness, [])
-def ga():
+def ga(args):
     # 0. Standby - load tsp file, check option...
     # 1. Initial Population
-    # 2. Evaluate Fitness & Check Stop
-    # 3. Select 
-    # 4. Crossover
-    # 5. Mutation
-    # 6. Next-Generation
-    # Loop 2~6    
+    # 2. Evaluate Fitness & Select
+    # 3. Crossover
+    # 4. Mutation
+    # 5. Next-Generation
+    # Loop 2~5
+
+    init_args(args)
     
     # 0. Load .tsp file
     fp = os.getcwd() + r'/data/'
-    filename = fp + r'rl11849.tsp'
+    filename = fp + args.file_name
     nodes = load_tspfile(filename)
     nodes.index = np.arange(1,len(nodes)+1)
     
-    init_args()
+
     
     # 1. Initial Population
-    f_sol = os.getcwd() + r'/generation/solution.txt'
-    solution = init_solution(f_sol, nodes)
+    f_sol = os.getcwd() + r'/generation/solution.csv'
+    solution, s_dist = init_solution(f_sol, nodes)
     f_pop = os.getcwd() + r'/generation/population.txt'
     population = init_population(f_pop, nodes)
         
@@ -364,9 +348,11 @@ def ga():
         
         print('\nselection')
         n_population, dist, sol = selection(population, nodes)
-        if sol > solution:
+        if dist[list(dist.keys())[0]] < s_dist:
+            s_dist = dist[list(dist.keys())[0]]
             solution = sol
-            save_solution(f_sol, sol)
+            save_solution(f_sol, solution)
+            save_population(f_pop, population)
         
         print('\ncrossover')
         population = crossover(population, nodes)
@@ -374,7 +360,7 @@ def ga():
         print('\nmutate')
         population = mutate(population, nodes)\
 
-    return solution, total_distance(solution, nodes), nodes
+    return solution, s_dist, nodes
 
 if __name__ == '__main__':
     solution, s_dist, nodes = ga()
